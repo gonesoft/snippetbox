@@ -51,14 +51,25 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		h.clientError(w, http.StatusMethodNotAllowed)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header()["X-XSS-Protection"] = []string{"1; mode=block"}
-	w.Write([]byte(`{"result":"Create a new snippet..."}`))
+	title := "1 snail"
+	content := "1 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
+	expires := "8"
+
+	id, err := h.snippets.Insert(title, content, expires)
+	if err != nil {
+		h.serverError(w, err)
+		return
+	}
+	if id == 0 {
+		id = 1
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
 }
 
 func (h *application) users(w http.ResponseWriter, r *http.Request) {
