@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/gonesoft/snippetbox/pkg/models/postgres"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
+	snippets *postgres.SnippetModel
 }
 
 func (h *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
