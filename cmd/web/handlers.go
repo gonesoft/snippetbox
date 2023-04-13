@@ -1,12 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"github.com/gonesoft/snippetbox/pkg/models"
 	"github.com/gonesoft/snippetbox/pkg/models/postgres"
 	"log"
 	"net/http"
 	"strconv"
-	"text/template"
 )
 
 type application struct {
@@ -21,24 +22,34 @@ func (h *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files := []string{
-		"ui/html/home.page.tmpl",
-		"ui/html/base.layout.tmpl",
-		"ui/html/footer.partial.tmpl",
-	}
-
-	ts, err := template.ParseFiles(files...)
+	s, err := h.snippets.Latest()
 	if err != nil {
-		log.Println(err.Error())
 		h.serverError(w, err)
 		return
 	}
 
-	err = ts.Execute(w, nil)
-	if err != nil {
-		log.Println(err.Error())
-		h.serverError(w, err)
+	for _, snippet := range s {
+		fmt.Fprintf(w, "%v", snippet)
 	}
+
+	//files := []string{
+	//	"ui/html/home.page.tmpl",
+	//	"ui/html/base.layout.tmpl",
+	//	"ui/html/footer.partial.tmpl",
+	//}
+	//
+	//ts, err := template.ParseFiles(files...)
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	h.serverError(w, err)
+	//	return
+	//}
+	//
+	//err = ts.Execute(w, nil)
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	h.serverError(w, err)
+	//}
 }
 
 func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +58,16 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		h.notFound(w)
 		return
 	}
-	fmt.Fprintf(w, "Display a specific snippet with ID %d...", id)
+	s, err := h.snippets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			h.notFound(w)
+		} else {
+			h.serverError(w, err)
+		}
+		return
+	}
+	fmt.Fprintf(w, "%v", s)
 }
 
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {

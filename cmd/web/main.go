@@ -27,6 +27,9 @@ func main() {
 	}
 	defer db.Close()
 
+	//db.SetMaxOpenConns(25)
+	//db.SetMaxIdleConns(2)
+
 	svc := postgres.NewSnippetModel(db)
 
 	app := &application{
