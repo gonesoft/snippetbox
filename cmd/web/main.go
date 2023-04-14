@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"github.com/gonesoft/snippetbox/pkg/models/postgres"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +14,7 @@ import (
 func main() {
 	addr := flag.String("addr", ":8080", "HTTP network address")
 
-	dns := flag.String("dns", "postgresql://postgres:password@localhost/graphql?sslmode=disable", "Postgres datasource name")
+	dns := flag.String("dns", "postgresql://postgres:password@localhost/snippetbox?sslmode=disable", "Postgres datasource name")
 
 	flag.Parse()
 
@@ -26,9 +27,15 @@ func main() {
 	}
 	defer db.Close()
 
+	//db.SetMaxOpenConns(25)
+	//db.SetMaxIdleConns(2)
+
+	svc := postgres.NewSnippetModel(db)
+
 	app := &application{
 		errorLog: errorLog,
 		infoLog:  infolog,
+		snippets: svc,
 	}
 
 	srv := &http.Server{
