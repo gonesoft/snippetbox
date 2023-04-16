@@ -3,32 +3,41 @@ package main
 import (
 	"database/sql"
 	"flag"
-	"github.com/gonesoft/snippetbox/pkg/models/postgres"
+	"fmt"
+	"github.com/gonesoft/snippetbox/pkg/models/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
-
-	_ "github.com/lib/pq"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
-	snippets *postgres.SnippetModel
-	sqlConn  *sql.DB
+	snippets database.SnippetModel
 }
 
 func main() {
 	addr := flag.String("addr", ":8085", "HTTP network address")
-
-	dns := flag.String("dns", "postgresql://postgres:password@localhost/snippetbox?sslmode=disable", "Postgres datasource name")
-
-	flag.Parse()
-
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	db, err := openDB(*dns)
+	envErr := godotenv.Load()
+	if envErr != nil {
+		errorLog.Fatal("Error loading .env file: %v", envErr)
+	}
+	flag.Parse()
+
+	cfg := database.Config{
+		Host:     os.Getenv("PGHOST"),
+		User:     os.Getenv("PGUSERNAME"),
+		Password: os.Getenv("PGPASSWORD"),
+		Name:     os.Getenv("PGDATABASE"),
+		Port:     5432,
+	}
+
+	db, err := openDB(cfg)
 	if err != nil {
 		errorLog.Fatal(err)
 	}
@@ -37,13 +46,10 @@ func main() {
 	//db.SetMaxOpenConns(25)
 	//db.SetMaxIdleConns(2)
 
-	svc := postgres.NewSnippetModel(db)
-
 	app := &application{
 		errorLog: errorLog,
 		infoLog:  infoLog,
-		sqlConn:  db,
-		snippets: svc,
+		snippets: database.SnippetModel{DB: db},
 	}
 
 	srv := &http.Server{
@@ -58,7 +64,10 @@ func main() {
 
 }
 
-func openDB(dns string) (*sql.DB, error) {
+func openDB(cfg database.Config) (*sql.DB, error) {
+	dns := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)
+
 	db, err := sql.Open("postgres", dns)
 	if err != nil {
 		return nil, err

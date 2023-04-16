@@ -1,4 +1,4 @@
-package postgres
+package database
 
 import (
 	"database/sql"
@@ -9,18 +9,18 @@ type SnippetModel struct {
 	DB *sql.DB
 }
 
-type SnippetModels interface {
-	Insert(title, content, expires string) (int, error)
-}
-
-func NewSnippetModel(db *sql.DB) *SnippetModel {
-	return &SnippetModel{DB: db}
+type Config struct {
+	Host     string
+	Password string
+	User     string
+	Name     string
+	Port     int
 }
 
 func (m *SnippetModel) Insert(title, content, expires string) (int, error) {
 	var id int
 
-	err := m.DB.QueryRow("INSERT INTO snippets (title, content, created_at, expires_at) VALUES($1, $2, NOW(), NOW() + INTERVAL '365 days') RETURNING id;",
+	err := m.DB.QueryRow(`INSERT INTO snippets (title, content, created_at, expires_at) VALUES($1, $2, NOW(), NOW() + INTERVAL '365 days') RETURNING id;`,
 		title,
 		content).Scan(&id)
 	if err != nil {
@@ -32,7 +32,7 @@ func (m *SnippetModel) Insert(title, content, expires string) (int, error) {
 
 func (m *SnippetModel) Get(id int) (*models.Snippet, error) {
 	s := &models.Snippet{}
-	err := m.DB.QueryRow("SELECT id, title, content, created_at, expires_at FROM snippets WHERE expires_at > NOW() AND id = $1", id).Scan(
+	err := m.DB.QueryRow(`SELECT id, title, content, created_at, expires_at FROM snippets WHERE expires_at > NOW() AND id = $1`, id).Scan(
 		&s.ID,
 		&s.Title,
 		&s.Content,
@@ -45,12 +45,12 @@ func (m *SnippetModel) Get(id int) (*models.Snippet, error) {
 		}
 		return nil, err
 	}
-
+	//this is a pointer to a snippet
 	return s, nil
 }
 
 func (m *SnippetModel) Latest() ([]*models.Snippet, error) {
-	rows, err := m.DB.Query("SELECT id, title, content, created_at, expires_at FROM snippets WHERE expires_at > NOW() ORDER BY created_at DESC LIMIT 10")
+	rows, err := m.DB.Query(`SELECT id, title, content, created_at, expires_at FROM snippets WHERE expires_at > NOW() ORDER BY created_at DESC LIMIT 10`)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, models.ErrNoRecord

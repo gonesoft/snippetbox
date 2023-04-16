@@ -34,6 +34,7 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		h.notFound(w)
 		return
 	}
+
 	s, err := h.snippets.Get(id)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
@@ -57,13 +58,12 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ts.Execute(w, nil)
+	err = ts.Execute(w, s)
 	if err != nil {
-		log.Println(err.Error())
 		h.serverError(w, err)
 	}
 
-	fmt.Fprintf(w, "%v", s)
+	//fmt.Fprintf(w, "%v", s)
 }
 
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
@@ -80,9 +80,6 @@ func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.serverError(w, err)
 		return
-	}
-	if id == 0 {
-		id = 1
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)

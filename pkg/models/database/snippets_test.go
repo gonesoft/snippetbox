@@ -1,4 +1,4 @@
-package postgres
+package database
 
 import (
 	"github.com/DATA-DOG/go-sqlmock"
