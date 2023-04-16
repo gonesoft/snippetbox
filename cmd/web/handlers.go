@@ -4,17 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gonesoft/snippetbox/pkg/models"
-	"github.com/gonesoft/snippetbox/pkg/models/postgres"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 )
-
-type application struct {
-	errorLog *log.Logger
-	infoLog  *log.Logger
-	snippets *postgres.SnippetModel
-}
 
 func (h *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -32,24 +26,6 @@ func (h *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%v", snippet)
 	}
 
-	//files := []string{
-	//	"ui/html/home.page.tmpl",
-	//	"ui/html/base.layout.tmpl",
-	//	"ui/html/footer.partial.tmpl",
-	//}
-	//
-	//ts, err := template.ParseFiles(files...)
-	//if err != nil {
-	//	log.Println(err.Error())
-	//	h.serverError(w, err)
-	//	return
-	//}
-	//
-	//err = ts.Execute(w, nil)
-	//if err != nil {
-	//	log.Println(err.Error())
-	//	h.serverError(w, err)
-	//}
 }
 
 func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +34,7 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		h.notFound(w)
 		return
 	}
+
 	s, err := h.snippets.Get(id)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
@@ -67,7 +44,26 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	fmt.Fprintf(w, "%v", s)
+
+	files := []string{
+		"ui/html/home.page.tmpl",
+		"ui/html/base.layout.tmpl",
+		"ui/html/footer.partial.tmpl",
+	}
+
+	ts, err := template.ParseFiles(files...)
+	if err != nil {
+		log.Println(err.Error())
+		h.serverError(w, err)
+		return
+	}
+
+	err = ts.Execute(w, s)
+	if err != nil {
+		h.serverError(w, err)
+	}
+
+	//fmt.Fprintf(w, "%v", s)
 }
 
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
@@ -84,9 +80,6 @@ func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.serverError(w, err)
 		return
-	}
-	if id == 0 {
-		id = 1
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
