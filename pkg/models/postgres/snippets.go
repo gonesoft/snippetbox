@@ -9,18 +9,22 @@ type SnippetModel struct {
 	DB *sql.DB
 }
 
+type SnippetModels interface {
+	Insert(title, content, expires string) (int, error)
+}
+
 func NewSnippetModel(db *sql.DB) *SnippetModel {
 	return &SnippetModel{DB: db}
 }
 
 func (m *SnippetModel) Insert(title, content, expires string) (int, error) {
 	var id int
-	err := m.DB.QueryRow("INSERT INTO snippets (title, content, created_at, expires_at) VALUES($1, $2, NOW(), NOW() + INTERVAL '365 days');",
+
+	err := m.DB.QueryRow("INSERT INTO snippets (title, content, created_at, expires_at) VALUES($1, $2, NOW(), NOW() + INTERVAL '365 days') RETURNING id;",
 		title,
 		content).Scan(&id)
 	if err != nil {
-
-		return 0, nil
+		return 0, err
 	}
 
 	return id, nil

@@ -1,25 +1,29 @@
 package postgres
 
 import (
-	"database/sql"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
+	"regexp"
 	"testing"
 )
 
 func TestSnippetModel_Insert(t *testing.T) {
-	db, err := sql.Open("postgres", "postgresql://postgres:password@localhost/snippetbox?sslmode=disable")
+	db, mock, err := sqlmock.New()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 	defer db.Close()
 
-	title := "2 snail"
-	content := "2 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
+	query := regexp.QuoteMeta("INSERT INTO snippets (title, content, created_at, expires_at) VALUES($1, $2, NOW(), NOW() + INTERVAL '365 days') RETURNING id;")
 
-	var id int64
-	err = db.QueryRow("INSERT INTO snippets (title, content, created_at, expires_at) VALUES($1, $2, NOW(), NOW() + INTERVAL '365 days');",
-		title,
-		content).Scan(&id)
+	m := SnippetModel{
+		DB: db,
+	}
+
+	mock.ExpectQuery(query).WithArgs("title", "content").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	id, err := m.Insert("title", "content", "")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, id)
 

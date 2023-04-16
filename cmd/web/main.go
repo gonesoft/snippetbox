@@ -11,14 +11,21 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type application struct {
+	errorLog *log.Logger
+	infoLog  *log.Logger
+	snippets *postgres.SnippetModel
+	sqlConn  *sql.DB
+}
+
 func main() {
-	addr := flag.String("addr", ":8080", "HTTP network address")
+	addr := flag.String("addr", ":8085", "HTTP network address")
 
 	dns := flag.String("dns", "postgresql://postgres:password@localhost/snippetbox?sslmode=disable", "Postgres datasource name")
 
 	flag.Parse()
 
-	infolog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
 	db, err := openDB(*dns)
@@ -34,7 +41,8 @@ func main() {
 
 	app := &application{
 		errorLog: errorLog,
-		infoLog:  infolog,
+		infoLog:  infoLog,
+		sqlConn:  db,
 		snippets: svc,
 	}
 
@@ -44,7 +52,7 @@ func main() {
 		Handler:  app.routes(),
 	}
 
-	infolog.Printf("Starting server on %s", *addr)
+	infoLog.Printf("Starting server on %s", *addr)
 	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
 
