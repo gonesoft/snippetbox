@@ -9,11 +9,6 @@ import (
 )
 
 func (h *application) showHome(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
 	s, err := h.snippets.Latest()
 	if err != nil {
 		h.serverError(w, err)
@@ -27,7 +22,7 @@ func (h *application) showHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	id, err := strconv.Atoi(r.URL.Query().Get(":id"))
 	if err != nil || id < 1 {
 		h.notFound(w)
 		return
@@ -48,12 +43,11 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 	h.render(w, r, "show.page.tmpl", data)
 }
 
+func (h *application) createSnippetForm(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Display the create snippet form..."))
+}
+
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		h.clientError(w, http.StatusMethodNotAllowed)
-		return
-	}
 	title := "1 snail"
 	content := "1 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
 	expires := "8"
