@@ -7,15 +7,18 @@ import (
 	"github.com/gonesoft/snippetbox/pkg/models/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
 )
 
 type application struct {
-	errorLog *log.Logger
-	infoLog  *log.Logger
-	snippets database.SnippetModel
+	errorLog      *log.Logger
+	infoLog       *log.Logger
+	snippets      database.SnippetModel
+	templateCache map[string]*template.Template
+	sayHello      string
 }
 
 func main() {
@@ -43,13 +46,19 @@ func main() {
 	}
 	defer db.Close()
 
+	templateCache, err := newTemplateCache("./ui/html/")
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
 	//db.SetMaxOpenConns(25)
 	//db.SetMaxIdleConns(2)
 
 	app := &application{
-		errorLog: errorLog,
-		infoLog:  infoLog,
-		snippets: database.SnippetModel{DB: db},
+		errorLog:      errorLog,
+		infoLog:       infoLog,
+		snippets:      database.SnippetModel{DB: db},
+		templateCache: templateCache,
 	}
 
 	srv := &http.Server{
@@ -78,4 +87,8 @@ func openDB(cfg database.Config) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+type Greetings struct {
+	Greetings string
 }
