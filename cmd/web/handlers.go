@@ -4,13 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gonesoft/snippetbox/pkg/models"
-	"html/template"
-	"log"
 	"net/http"
 	"strconv"
 )
 
-func (h *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *application) showHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -22,9 +20,9 @@ func (h *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, snippet := range s {
-		fmt.Fprintf(w, "%v", snippet)
-	}
+	data := &templateData{Snippets: s}
+
+	h.render(w, r, "home.page.tmpl", data)
 
 }
 
@@ -45,25 +43,9 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	files := []string{
-		"ui/html/home.page.tmpl",
-		"ui/html/base.layout.tmpl",
-		"ui/html/footer.partial.tmpl",
-	}
+	data := &templateData{Snippet: s}
 
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		h.serverError(w, err)
-		return
-	}
-
-	err = ts.Execute(w, s)
-	if err != nil {
-		h.serverError(w, err)
-	}
-
-	//fmt.Fprintf(w, "%v", s)
+	h.render(w, r, "show.page.tmpl", data)
 }
 
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
