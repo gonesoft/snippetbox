@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/gonesoft/snippetbox/pkg/forms"
 	"github.com/gonesoft/snippetbox/pkg/models"
 	"net/http"
 	"strconv"
@@ -44,21 +45,35 @@ func (h *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *application) createSnippetForm(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Display the create snippet form..."))
+	h.render(w, r, "create.page.tmpl", &templateData{
+		Form: forms.New(nil),
+	})
 }
 
 func (h *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	title := "1 snail"
-	content := "1 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
-	expires := "8"
+	err := r.ParseForm()
+	if err != nil {
+		h.clientError(w, http.StatusBadRequest)
+		return
+	}
 
-	id, err := h.snippets.Insert(title, content, expires)
+	form := forms.New(r.PostForm)
+	form.Required("title", "content", "expires")
+	form.MaxLength("title", 100)
+	form.PermittedValues("expires", "365", "7", "1")
+
+	if !form.Valid() {
+		h.render(w, r, "create.page.tmpl", &templateData{Form: form})
+		return
+	}
+
+	id, err := h.snippets.Insert(form.Get("title"), form.Get("content"), form.Get("expires"))
 	if err != nil {
 		h.serverError(w, err)
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/snippet/%d", id), http.StatusSeeOther)
 }
 
 func (h *application) users(w http.ResponseWriter, r *http.Request) {
