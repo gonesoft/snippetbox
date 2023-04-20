@@ -13,6 +13,7 @@ type templateData struct {
 	Snippets    []*models.Snippet
 	CurrentYear int
 	Form        *forms.Form
+	Flash       string
 }
 
 func readableDate(t time.Time) string {
