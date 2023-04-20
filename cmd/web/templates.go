@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gonesoft/snippetbox/pkg/forms"
 	"github.com/gonesoft/snippetbox/pkg/models"
 	"html/template"
 	"path/filepath"
@@ -11,6 +12,8 @@ type templateData struct {
 	Snippet     *models.Snippet
 	Snippets    []*models.Snippet
 	CurrentYear int
+	Form        *forms.Form
+	Flash       string
 }
 
 func readableDate(t time.Time) string {

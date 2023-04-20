@@ -1,2 +1,5 @@
 .env
+
+#Goland
 .idea/
+/go_build_*
