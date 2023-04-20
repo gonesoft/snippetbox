@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"github.com/golangcollege/sessions"
 	"github.com/gonesoft/snippetbox/pkg/models/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -11,18 +12,21 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type application struct {
 	errorLog      *log.Logger
 	infoLog       *log.Logger
+	session       *sessions.Session
 	snippets      database.SnippetModel
 	templateCache map[string]*template.Template
-	sayHello      string
 }
 
 func main() {
 	addr := flag.String("addr", ":8085", "HTTP network address")
+	flag.Parse()
+
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
@@ -30,7 +34,10 @@ func main() {
 	if envErr != nil {
 		errorLog.Fatal("Error loading .env file: %v", envErr)
 	}
-	flag.Parse()
+
+	secret := os.Getenv("SESSION_KEY")
+	session := sessions.New([]byte(secret))
+	session.Lifetime = 12 * time.Hour
 
 	cfg := database.Config{
 		Host:     os.Getenv("PGHOST"),
@@ -57,6 +64,7 @@ func main() {
 	app := &application{
 		errorLog:      errorLog,
 		infoLog:       infoLog,
+		session:       session,
 		snippets:      database.SnippetModel{DB: db},
 		templateCache: templateCache,
 	}
@@ -87,8 +95,4 @@ func openDB(cfg database.Config) (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-type Greetings struct {
-	Greetings string
 }
