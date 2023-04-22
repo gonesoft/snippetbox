@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/gonesoft/snippetbox/pkg/models"
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
@@ -37,8 +38,8 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 		hashedPassword []byte
 	)
 
-	row := m.DB.QueryRow(`SELECT id, hashed_password FROM users WHERE email = $1 and active = TRUE;`, email)
-	err := row.Scan(&id, &hashedPassword)
+	err := m.DB.QueryRow(`SELECT id, hashed_password FROM users WHERE email = $1 and active = TRUE;`, email).Scan(
+		&id, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, models.ErrInvalidCredentials
@@ -58,5 +59,17 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 }
 
 func (m *UserModel) Get(id int) (*models.User, error) {
-	return nil, nil
+	usr := &models.User{}
+
+	err := m.DB.QueryRow(`SELECT id, name, email, created, active FROM users WHERE id = $1`, id).Scan(
+		&usr.ID, &usr.Name, &usr.Email, &usr.Created, &usr.Active)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, models.ErrNoRecord
+		} else {
+			return nil, err
+		}
+	}
+
+	return usr, nil
 }
