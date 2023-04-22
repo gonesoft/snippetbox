@@ -21,6 +21,7 @@ type application struct {
 	session       *sessions.Session
 	snippets      database.SnippetModel
 	templateCache map[string]*template.Template
+	users         *database.UserModel
 }
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 	secret := os.Getenv("SESSION_KEY")
 	session := sessions.New([]byte(secret))
 	session.Lifetime = 12 * time.Hour
+	session.SameSite = http.SameSiteStrictMode
 
 	cfg := database.Config{
 		Host:     os.Getenv("PGHOST"),
@@ -67,12 +69,16 @@ func main() {
 		session:       session,
 		snippets:      database.SnippetModel{DB: db},
 		templateCache: templateCache,
+		users:         &database.UserModel{DB: db},
 	}
 
 	srv := &http.Server{
-		Addr:     *addr,
-		ErrorLog: errorLog,
-		Handler:  app.routes(),
+		Addr:         *addr,
+		ErrorLog:     errorLog,
+		Handler:      app.routes(),
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	infoLog.Printf("Starting server on %s", *addr)

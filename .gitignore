@@ -2,4 +2,4 @@
 
 #Goland
 .idea/
-/go_build_*
+tls/
