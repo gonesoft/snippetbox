@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/golangcollege/sessions"
+	"github.com/gonesoft/snippetbox/pkg/models"
 	"github.com/gonesoft/snippetbox/pkg/models/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -20,12 +21,20 @@ type contextKey string
 const contextKeyIsAuthenticated = contextKey("isAuthenticated")
 
 type application struct {
-	errorLog      *log.Logger
-	infoLog       *log.Logger
-	session       *sessions.Session
-	snippets      database.SnippetModel
+	errorLog *log.Logger
+	infoLog  *log.Logger
+	session  *sessions.Session
+	snippets interface {
+		Insert(string, string, string) (int, error)
+		Get(int) (*models.Snippet, error)
+		Latest() ([]*models.Snippet, error)
+	}
 	templateCache map[string]*template.Template
-	users         *database.UserModel
+	users         interface {
+		Insert(string, string, string) error
+		Authenticate(string, string) (int, error)
+		Get(int) (*models.User, error)
+	}
 }
 
 func main() {
@@ -37,7 +46,7 @@ func main() {
 
 	envErr := godotenv.Load()
 	if envErr != nil {
-		errorLog.Fatal("Error loading .env file: %v", envErr)
+		errorLog.Fatalf("Error loading .env file: %v", envErr)
 	}
 
 	secret := os.Getenv("SESSION_KEY")
@@ -71,7 +80,7 @@ func main() {
 		errorLog:      errorLog,
 		infoLog:       infoLog,
 		session:       session,
-		snippets:      database.SnippetModel{DB: db},
+		snippets:      &database.SnippetModel{DB: db},
 		templateCache: templateCache,
 		users:         &database.UserModel{DB: db},
 	}
