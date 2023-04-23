@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/golangcollege/sessions"
+	"github.com/gonesoft/snippetbox/pkg/models"
 	"github.com/gonesoft/snippetbox/pkg/models/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -15,12 +16,25 @@ import (
 	"time"
 )
 
+type contextKey string
+
+const contextKeyIsAuthenticated = contextKey("isAuthenticated")
+
 type application struct {
-	errorLog      *log.Logger
-	infoLog       *log.Logger
-	session       *sessions.Session
-	snippets      database.SnippetModel
+	errorLog *log.Logger
+	infoLog  *log.Logger
+	session  *sessions.Session
+	snippets interface {
+		Insert(string, string, string) (int, error)
+		Get(int) (*models.Snippet, error)
+		Latest() ([]*models.Snippet, error)
+	}
 	templateCache map[string]*template.Template
+	users         interface {
+		Insert(string, string, string) error
+		Authenticate(string, string) (int, error)
+		Get(int) (*models.User, error)
+	}
 }
 
 func main() {
@@ -32,12 +46,13 @@ func main() {
 
 	envErr := godotenv.Load()
 	if envErr != nil {
-		errorLog.Fatal("Error loading .env file: %v", envErr)
+		errorLog.Fatalf("Error loading .env file: %v", envErr)
 	}
 
 	secret := os.Getenv("SESSION_KEY")
 	session := sessions.New([]byte(secret))
 	session.Lifetime = 12 * time.Hour
+	session.SameSite = http.SameSiteStrictMode
 
 	cfg := database.Config{
 		Host:     os.Getenv("PGHOST"),
@@ -65,14 +80,18 @@ func main() {
 		errorLog:      errorLog,
 		infoLog:       infoLog,
 		session:       session,
-		snippets:      database.SnippetModel{DB: db},
+		snippets:      &database.SnippetModel{DB: db},
 		templateCache: templateCache,
+		users:         &database.UserModel{DB: db},
 	}
 
 	srv := &http.Server{
-		Addr:     *addr,
-		ErrorLog: errorLog,
-		Handler:  app.routes(),
+		Addr:         *addr,
+		ErrorLog:     errorLog,
+		Handler:      app.routes(),
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	infoLog.Printf("Starting server on %s", *addr)
